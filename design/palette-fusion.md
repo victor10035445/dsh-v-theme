@@ -1,6 +1,6 @@
 # V 调色板 · Fusion 设计语言
 
-> 来源：`demo5-fusion.html`（APT 紫队工具 · Fusion 模式）的完整视觉提炼。
+> 来源：`design/refs/demo5-fusion.html`（APT 紫队工具 · Fusion 模式）的完整视觉提炼。
 > 用途：dsh-v-theme 及后续增量设计的**唯一色彩与线条参照**。
 > 原则：**SOC 克制基底 + FUI 霓虹点睛 + 语义色信息编码**——三层各司其职，永不混用。
 
