@@ -11,5 +11,9 @@ __pycache__/
 Thumbs.db
 Desktop.ini
 
+# AI 编辑器本地技能（不入仓库，本地保留）
+.claude/
+.trae/
+
 # 日志
 *.log
