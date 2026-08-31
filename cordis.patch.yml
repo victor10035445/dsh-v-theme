@@ -1,0 +1,6 @@
+# dsh-v-theme 服务端补丁层：把插件注册进 cordis loader。
+# client-modules 扫描 loader 条目时发现本包的 dsh.client 声明，
+# 自动把 lib/client.js 编入 /plugins 启动图。
+- insert:
+    - id: dsh-v-theme
+      name: dsh-v-theme
