@@ -32,20 +32,14 @@ DeepSeek Harness Web 客户端的**黑客 / 赛博主题插件**，内含两套�
 
 ## 安装
 
-方式 A（本地开发，link 直连本仓库）：
-
-```sh
-dsh plugin --profile web add "link:c:\project\dsh-plugin-v\dsh-v-theme"
-```
-
-方式 B（打包后安装 tgz）：
+打包后安装 tgz：
 
 ```sh
 npm pack                       # 产出 dsh-v-theme-0.5.0.tgz
 dsh plugin --profile web add "<tgz 的绝对路径>"
 ```
 
-两种方式 `add` 都会把 `dsh-v-theme` 注册进 profile 的 bundle 列表。装完**重启 `dsh web`**，刷新页面生效。
+`add` 会把 `dsh-v-theme` 注册进 profile 的 bundle 列表。装完**重启 `dsh web`**，刷新页面生效。
 
 ## 使用
 
@@ -55,6 +49,15 @@ dsh plugin --profile web add "<tgz 的绝对路径>"
 - **风格选择**（两枚 chips）：「合成波 '84」/「融合战术」——**开启状态下切换即时热替换**（令牌层 + 特效层整体换装，无需重启）；选择持久化，重启后恢复
 - 关闭总开关：撤掉令牌层与特效，还原开启前的外观偏好
 - 在「外观」里切到浅色/跟随系统会自动断开本主题（尊重你的基底选择）
+
+## 本地开发
+
+克隆仓库后 link 直连调试（免打包，改动后重启 `dsh web` 生效）：
+
+```sh
+git clone <仓库地址>
+dsh plugin --profile web add "link:<克隆路径>"
+```
 
 ## 技术原理
 
