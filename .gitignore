@@ -15,5 +15,8 @@ Desktop.ini
 .claude/
 .trae/
 
+# OpenSpec 开发过程目录（specs/changes 归档，不入仓库）
+openspec/
+
 # 日志
 *.log

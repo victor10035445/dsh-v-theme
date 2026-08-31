@@ -79,7 +79,6 @@ package.json        插件清单（dsh.bundle.patch + dsh.client 声明）
 cordis.patch.yml    loader 插入条目
 lib/index.js        宿主端入口（空插件）
 lib/client.js       客户端 bundle（factory 形式，手写零构建）
-openspec/           OpenSpec 范式目录（目前仅 config.yaml；specs/ 与 changes/ 待补录）
 design/             设计参照：palette-fusion.md 设计语言 + refs/（官方 CSS 与令牌提取产物、demo5-fusion.html 参照稿）
 tools/              官方前端产物提取脚本（extract-css / list-tokens，DSH 升级后重新提取时复用）
 tests/              可运行校验（Node，无浏览器）
