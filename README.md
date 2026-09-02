@@ -34,10 +34,16 @@ DeepSeek Harness Web 客户端的**黑客 / 赛博主题插件**，内含两套�
 
 ## 安装
 
-**方式一 · GitHub 地址直装（推荐）**：
+**方式一 · GitHub 地址直装（推荐）**——本插件手写零构建、无任何安装期脚本，git 安装无需构建授权：
 
 ```sh
-dsh plugin --profile web add "https://github.com/victor10035445/dsh-v-theme"
+dsh plugin --profile web add "github:victor10035445/dsh-v-theme"
+```
+
+如需锁定版本（后续推送不会悄悄改变实际运行的代码）：
+
+```sh
+dsh plugin --profile web add "github:victor10035445/dsh-v-theme#<commit-sha>"
 ```
 
 装完**重启 `dsh web`**，刷新页面生效。

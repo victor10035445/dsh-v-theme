@@ -34,10 +34,16 @@ Purely additive: it never replaces or disables any official plugin; zero side ef
 
 ## Install
 
-**Option 1 · Install directly from GitHub (recommended)**:
+**Option 1 · Install directly from GitHub (recommended)** — this plugin is hand-written with zero build steps and no install-time scripts, so a git install needs no build authorization:
 
 ```sh
-dsh plugin --profile web add "https://github.com/victor10035445/dsh-v-theme"
+dsh plugin --profile web add "github:victor10035445/dsh-v-theme"
+```
+
+To pin a version (later pushes can't silently change what actually runs):
+
+```sh
+dsh plugin --profile web add "github:victor10035445/dsh-v-theme#<commit-sha>"
 ```
 
 After installing, **restart `dsh web`** and refresh the page.
