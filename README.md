@@ -1,5 +1,7 @@
 # dsh-v-theme · V CYBER（多主题）
 
+**简体中文** | [English](README.en.md)
+
 DeepSeek Harness Web 客户端的**黑客 / 赛博主题插件**，内含两套可切换风格：
 
 | 主题 | 气质 | 签名 |
@@ -32,14 +34,29 @@ DeepSeek Harness Web 客户端的**黑客 / 赛博主题插件**，内含两套�
 
 ## 安装
 
-打包后安装 tgz：
+**方式一 · GitHub 地址直装（推荐）**：
+
+```sh
+dsh plugin --profile web add "https://github.com/victor10035445/dsh-v-theme"
+```
+
+装完**重启 `dsh web`**，刷新页面生效。
+
+**方式二 · 本地 clone + link 直连**（免打包，改动后重启 `dsh web` 生效，适合开发调试）：
+
+```sh
+git clone https://github.com/victor10035445/dsh-v-theme.git
+dsh plugin --profile web add "link:<克隆路径>"
+```
+
+**方式三 · tgz 打包安装**：
 
 ```sh
 npm pack                       # 产出 dsh-v-theme-0.5.0.tgz
 dsh plugin --profile web add "<tgz 的绝对路径>"
 ```
 
-`add` 会把 `dsh-v-theme` 注册进 profile 的 bundle 列表。装完**重启 `dsh web`**，刷新页面生效。
+`add` 会把 `dsh-v-theme` 注册进 profile 的 bundle 列表。
 
 ## 使用
 
@@ -49,15 +66,6 @@ dsh plugin --profile web add "<tgz 的绝对路径>"
 - **风格选择**（两枚 chips）：「赛博霓虹」/「战术面板」——**开启状态下切换即时热替换**（令牌层 + 特效层整体换装，无需重启）；选择持久化，重启后恢复（旧版持久化的主题 id 会自动迁移）
 - 关闭总开关：撤掉令牌层与特效，还原开启前的外观偏好
 - 在「外观」里切到浅色/跟随系统会自动断开本主题（尊重你的基底选择）
-
-## 本地开发
-
-克隆仓库后 link 直连调试（免打包，改动后重启 `dsh web` 生效）：
-
-```sh
-git clone <仓库地址>
-dsh plugin --profile web add "link:<克隆路径>"
-```
 
 ## 技术原理
 
