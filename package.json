@@ -1,8 +1,17 @@
 {
   "name": "dsh-v-theme",
-  "description": "V CYBER — multi-theme plugin for the DeepSeek Harness Web client: Synthwave '84 (neon pink × electric blue) and Fusion Tactical (SOC dashboard + FUI cyan neon)",
+  "description": "V CYBER — multi-theme plugin for the DeepSeek Harness Web client: NEON (cyber neon pink × electric blue) and TACTICAL (SOC dashboard + FUI cyan neon)",
   "version": "0.5.0",
   "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness-web",
+    "theme",
+    "cyberpunk",
+    "synthwave",
+    "hud",
+    "dark-theme"
+  ],
   "type": "module",
   "main": "lib/index.js",
   "exports": {

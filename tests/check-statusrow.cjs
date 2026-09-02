@@ -8,7 +8,7 @@
  *  4. 完成态框体必须挂在 data-v-completed 标记上（亮绿 #00FF88 + 状态点同步），
  *     不得直接挂在 data-state="done" 上（官方把完成与空闲都渲染成 done）
  *  5. 失效选择器 navItemActive（当前前端构建零命中）不得回潮
- *  6. 主题配色与设计方案一致（Fusion 青/黄 · Synthwave 粉蓝/金 · 完成=亮绿）
+ *  6. 主题配色与设计方案一致（Tactical 青/黄 · Neon 粉蓝/金 · 完成=亮绿）
  *  7. JS 侧标记链路完备：DONE_ATTR 常量 + zh/en 标签匹配集 + MutationObserver 扫描
  */
 const fs = require("fs");
@@ -16,17 +16,17 @@ const path = require("path");
 
 const src = fs.readFileSync(path.join(__dirname, "..", "lib", "client.js"), "utf8");
 
-const synStart = src.indexOf("const FX_SYNTHWAVE");
-const fusStart = src.indexOf("const FX_FUSION");
-const palStart = src.indexOf("const PALETTE_SYNTHWAVE");
-if (synStart < 0 || fusStart < 0 || palStart < 0 || !(synStart < fusStart && fusStart < palStart))
+const neonStart = src.indexOf("const FX_NEON");
+const tacStart = src.indexOf("const FX_TACTICAL");
+const palStart = src.indexOf("const PALETTE_NEON");
+if (neonStart < 0 || tacStart < 0 || palStart < 0 || !(neonStart < tacStart && tacStart < palStart))
   throw new Error("FX layer markers not found / out of order");
-const SYN = src.slice(synStart, fusStart);
-const FUS = src.slice(fusStart, palStart);
+const NEON = src.slice(neonStart, tacStart);
+const TAC = src.slice(tacStart, palStart);
 
 const PLAN = {
-  fusion: {
-    block: FUS,
+  tactical: {
+    block: TAC,
     ongoingBar: "#56D4E0",
     ongoingTint: "rgba(86,212,224,.05)",
     warningBar: "#F0C239",
@@ -34,8 +34,8 @@ const PLAN = {
     matrix: "--dsh-state-ongoing:#56D4E0",
     completedTint: "rgba(0,255,136,.05)"
   },
-  synthwave: {
-    block: SYN,
+  neon: {
+    block: NEON,
     ongoingBar: "#4DA8FF",
     ongoingTint: "rgba(77,168,255,.06)",
     warningBar: "#FFC857",

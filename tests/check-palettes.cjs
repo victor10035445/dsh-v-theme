@@ -45,7 +45,7 @@ function paletteKeys(marker) {
 }
 
 let fail = false;
-for (const [name, marker] of [["synthwave", "PALETTE_SYNTHWAVE"], ["fusion", "PALETTE_FUSION"]]) {
+for (const [name, marker] of [["neon", "PALETTE_NEON"], ["tactical", "PALETTE_TACTICAL"]]) {
   const keys = paletteKeys(marker);
   const leaked = BANNED.filter((t) => keys.has(t));
   const missing = REQUIRED.filter((t) => !keys.has(t));

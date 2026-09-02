@@ -18,5 +18,8 @@ Desktop.ini
 # OpenSpec 开发过程目录（specs/changes 归档，不入仓库）
 openspec/
 
+# DSH 官方前端提取产物与设计参照稿（tools/extract-css.cjs 本地生成；版权考虑，不入仓库）
+design/refs/
+
 # 日志
 *.log

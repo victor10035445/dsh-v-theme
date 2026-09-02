@@ -2,8 +2,19 @@
 const { createRequire } = require("module");
 const { readFileSync, existsSync } = require("fs");
 const { join, dirname } = require("path");
+const { homedir } = require("os");
 
-const require_ = createRequire("C:/Users/xuenbo01/.dsh/profiles/web/package.json");
+/* profile 位置：argv[2] > 环境变量 DSH_PROFILE > 默认 ~/.dsh/profiles/web */
+const profilePkg = process.argv[2]
+  || process.env.DSH_PROFILE
+  || join(homedir(), ".dsh", "profiles", "web", "package.json");
+if (!existsSync(profilePkg)) {
+  console.error(`profile package.json 不存在: ${profilePkg}`);
+  console.error("用法: node tests/verify-install.cjs [profile 的 package.json 路径]");
+  console.error("  或: DSH_PROFILE=<路径> node tests/verify-install.cjs");
+  process.exit(1);
+}
+const require_ = createRequire(profilePkg);
 
 // 1. loader 条目的 name 必须能 resolve 到 package.json
 const pkgPath = require_.resolve("dsh-v-theme/package.json");

@@ -15,9 +15,13 @@ const registrations = [];
 global.window = { __ModuleLoader__: { load: (reg) => registrations.push(reg) } };
 
 const localStorageData = new Map();
+const localStorageWriteCounts = new Map();
 global.localStorage = {
   getItem: (k) => (localStorageData.has(k) ? localStorageData.get(k) : null),
-  setItem: (k, v) => void localStorageData.set(k, String(v)),
+  setItem: (k, v) => {
+    localStorageWriteCounts.set(k, (localStorageWriteCounts.get(k) || 0) + 1);
+    localStorageData.set(k, String(v));
+  },
   removeItem: (k) => void localStorageData.delete(k)
 };
 
@@ -127,12 +131,14 @@ function makeTheme() {
 /* ---------- mock ctx ---------- */
 const theme = makeTheme();
 const slotRegistrations = [];
+const slotPropsHistory = [];
 const ctx = {
   theme,
   locale: { register: (ns, dicts) => { if (!dicts.zh || !dicts.en) throw new Error("locale dicts incomplete"); const zk = Object.keys(dicts.zh).sort().join(); const ek = Object.keys(dicts.en).sort().join(); if (zk !== ek) throw new Error("zh/en key mismatch"); return () => {}; } },
   slots: { inject: (name, cb) => { if (name !== "settings.section") throw new Error("unexpected slot " + name); slotRegistrations.push(cb()); return () => {}; }, register: (decl, comp) => { if (decl.id !== "v-skin") throw new Error("bad slot id: " + decl.id); if (typeof decl.label !== "function") throw new Error("section label must be a function"); const inst = decl.store.decl ? null : null; const storeInst = { state: decl.store ? stores[stores.length - 1].decl.init() : null }; // bind actions
       const actions = {}; const handle = stores[stores.length - 1]; const state = handle.decl.init(); for (const [k, fn] of Object.entries(handle.decl.actions)) actions[k] = (...a) => fn(state, ...a);
       const props = decl.inject(actions);
+      slotPropsHistory.push(props);
       if (typeof props.toggle !== "function") throw new Error("slot inject must return toggle");
       if (typeof props.setTheme !== "function") throw new Error("slot inject must return setTheme");
       if (typeof props.toggleGlow !== "function") throw new Error("slot inject must return toggleGlow");
@@ -163,7 +169,7 @@ if (localStorage.getItem("dsh-v-theme:enabled") !== "1") throw new Error("flag n
 /* console 特效覆盖层：仅 HUD（ticker 已移除） */
 if (bodyOverlays.length !== 1) throw new Error("expected 1 body overlay (HUD only), got " + bodyOverlays.length);
 const hudEl = bodyOverlays.find((el) => el.className === "v-hud");
-if (!hudEl || hudEl.children[0].textContent !== "█ V://SYNTHWAVE █") throw new Error("hud brand missing");
+if (!hudEl || hudEl.children[0].textContent !== "█ V://NEON █") throw new Error("hud brand missing");
 console.log("ok: toggle on => dark + layer + fx + flag + console overlays");
 
 /* self-heal: simulate layer removal */
@@ -173,22 +179,22 @@ theme.publish();
 if (theme.layerCount() !== 1) throw new Error("layer must not duplicate on publish");
 console.log("ok: no duplicate layer on unrelated publish");
 
-/* ── 主题切换：synthwave → fusion ── */
-slotRegistrations.slot.props.setTheme("fusion");
-if (localStorage.getItem("dsh-v-theme:theme") !== "fusion") throw new Error("theme choice must persist");
+/* ── 主题切换：neon → tactical ── */
+slotRegistrations.slot.props.setTheme("tactical");
+if (localStorage.getItem("dsh-v-theme:theme") !== "tactical") throw new Error("theme choice must persist");
 const tokensF = theme.snapshot().active.tokens;
-if (tokensF["--dsw-alias-brand-primary"] !== "#56D4E0") throw new Error("fusion accent not applied: " + tokensF["--dsw-alias-brand-primary"]);
-if ("--dsw-alias-bg-base" in tokensF) throw new Error("fusion must NOT override background tokens (native DSH backgrounds)");
-if ("--dsw-specific-bubble" in tokensF) throw new Error("fusion must NOT override bubble surface (native)");
+if (tokensF["--dsw-alias-brand-primary"] !== "#56D4E0") throw new Error("tactical accent not applied: " + tokensF["--dsw-alias-brand-primary"]);
+if ("--dsw-alias-bg-base" in tokensF) throw new Error("tactical must NOT override background tokens (native DSH backgrounds)");
+if ("--dsw-specific-bubble" in tokensF) throw new Error("tactical must NOT override bubble surface (native)");
 if (theme.layerCount() !== 1) throw new Error("theme switch must keep exactly one layer");
 const hudF = bodyOverlays.find((el) => el.className === "v-hud");
-if (!hudF || hudF.children[0].textContent !== "█ V://FUSION █") throw new Error("hud brand must switch to fusion");
-console.log("ok: theme switch => fusion palette + fx hot-swapped");
+if (!hudF || hudF.children[0].textContent !== "█ V://TACTICAL █") throw new Error("hud brand must switch to tactical");
+console.log("ok: theme switch => tactical palette + fx hot-swapped");
 
-/* 切回 synthwave：令牌恢复 */
-slotRegistrations.slot.props.setTheme("synthwave");
-if (theme.snapshot().active.tokens["--dsw-alias-brand-primary"] !== "#FF2E97") throw new Error("switch back to synthwave failed");
-console.log("ok: theme switch back => synthwave restored");
+/* 切回 neon：令牌恢复 */
+slotRegistrations.slot.props.setTheme("neon");
+if (theme.snapshot().active.tokens["--dsw-alias-brand-primary"] !== "#FF2E97") throw new Error("switch back to neon failed");
+console.log("ok: theme switch back => neon restored");
 
 /* ── 辉光开关：默认关；开 → body 类 + 持久化；关 → 摘类 ── */
 if (bodyClasses.has("v-glow")) throw new Error("glow must default to off");
@@ -216,7 +222,7 @@ if (theme.preference !== "light") throw new Error("toggle off must restore the p
 if (theme.layerCount() !== 0) throw new Error("toggle off must drop layer");
 console.log("ok: toggle off => restore preference");
 
-/* boot with flag on — 恢复上次的主题选择（此刻是 synthwave） */
+/* boot with flag on — 持久化的是旧 id "fusion"：必须迁移为 tactical 并回写 */
 localStorage.setItem("dsh-v-theme:enabled", "1");
 localStorage.setItem("dsh-v-theme:theme", "fusion");
 const theme2 = makeTheme();
@@ -225,14 +231,37 @@ ctx.on = (ev, fn) => theme2.on(fn);
 exports_.apply(ctx);
 if (theme2.preference !== "dark" || theme2.layerCount() !== 1) throw new Error("boot with flag on must re-activate");
 if (bodyOverlays.length !== 1) throw new Error("boot with flag on must mount console overlay (HUD)");
+if (localStorage.getItem("dsh-v-theme:theme") !== "tactical") throw new Error("boot must migrate legacy id fusion => tactical");
 const tokensBoot = theme2.snapshot().active.tokens;
-if (tokensBoot["--dsw-alias-brand-primary"] !== "#56D4E0") throw new Error("boot must restore persisted fusion theme");
+if (tokensBoot["--dsw-alias-brand-primary"] !== "#56D4E0") throw new Error("boot must restore persisted tactical theme");
 const hudBoot = bodyOverlays.find((el) => el.className === "v-hud");
-if (!hudBoot || hudBoot.children[0].textContent !== "█ V://FUSION █") throw new Error("boot must restore fusion hud brand");
-console.log("ok: boot with flag on => re-activate with persisted theme");
+if (!hudBoot || hudBoot.children[0].textContent !== "█ V://TACTICAL █") throw new Error("boot must restore tactical hud brand");
+console.log("ok: boot with legacy id fusion => migrated to tactical + re-activated");
 
-/* 收尾：关掉第二个实例，清掉 HUD 心跳，让进程可退出 */
+/* boot with flag on — 存值已是新 id：不得对 THEME_KEY 产生额外写入 */
+localStorage.setItem("dsh-v-theme:enabled", "1");
+localStorage.setItem("dsh-v-theme:theme", "tactical");
+const writesBefore = localStorageWriteCounts.get("dsh-v-theme:theme") || 0;
+const theme3 = makeTheme();
+ctx.theme = theme3;
+ctx.on = (ev, fn) => theme3.on(fn);
+exports_.apply(ctx);
+if (localStorage.getItem("dsh-v-theme:theme") !== "tactical") throw new Error("boot must keep new id untouched");
+if ((localStorageWriteCounts.get("dsh-v-theme:theme") || 0) !== writesBefore)
+  throw new Error("boot must NOT rewrite THEME_KEY when value is already a new id");
+if (theme3.snapshot().active.tokens["--dsw-alias-brand-primary"] !== "#56D4E0")
+  throw new Error("boot must restore tactical theme without rewrite");
+console.log("ok: boot with new id => no extra THEME_KEY write");
+
+/* 收尾本实例：断开 theme3，只留下 theme2 的 HUD（由末尾统一收尾） */
 slotRegistrations.slot.props.toggle();
+if (bodyOverlays.length !== 1) throw new Error("theme3 disconnect must leave exactly theme2's HUD");
+console.log("ok: theme3 disconnect => only theme2 HUD remains");
+
+/* 收尾：theme3 已断开（flag 已被置 false）；flag 是全局共享状态，
+   先恢复为 "1" 才能让 theme2 的 toggle 走 deactivate 分支而非 activate */
+localStorage.setItem("dsh-v-theme:enabled", "1");
+slotPropsHistory[1].toggle();
 if (bodyOverlays.length !== 0) throw new Error("final toggle off must remove overlays");
 console.log("ok: final toggle off => overlays cleaned");
 
