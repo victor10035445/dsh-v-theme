@@ -23,3 +23,6 @@ design/refs/
 
 # 日志
 *.log
+
+# 参考工程（dsh-theme-jiuyu 迭代分支副本，仅本地保留）
+dsh-theme-jiuyu/

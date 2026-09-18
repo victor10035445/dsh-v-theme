@@ -16,17 +16,17 @@ const path = require("path");
 
 const src = fs.readFileSync(path.join(__dirname, "..", "lib", "client.js"), "utf8");
 
-const neonStart = src.indexOf("const FX_NEON");
-const tacStart = src.indexOf("const FX_TACTICAL");
+const synStart = src.indexOf("const FX_NEON");
+const fusStart = src.indexOf("const FX_TACTICAL");
 const palStart = src.indexOf("const PALETTE_NEON");
-if (neonStart < 0 || tacStart < 0 || palStart < 0 || !(neonStart < tacStart && tacStart < palStart))
+if (synStart < 0 || fusStart < 0 || palStart < 0 || !(synStart < fusStart && fusStart < palStart))
   throw new Error("FX layer markers not found / out of order");
-const NEON = src.slice(neonStart, tacStart);
-const TAC = src.slice(tacStart, palStart);
+const SYN = src.slice(synStart, fusStart);
+const FUS = src.slice(fusStart, palStart);
 
 const PLAN = {
   tactical: {
-    block: TAC,
+    block: FUS,
     ongoingBar: "#56D4E0",
     ongoingTint: "rgba(86,212,224,.05)",
     warningBar: "#F0C239",
@@ -35,7 +35,7 @@ const PLAN = {
     completedTint: "rgba(0,255,136,.05)"
   },
   neon: {
-    block: NEON,
+    block: SYN,
     ongoingBar: "#4DA8FF",
     ongoingTint: "rgba(77,168,255,.06)",
     warningBar: "#FFC857",
@@ -85,6 +85,34 @@ for (const [name, p] of Object.entries(PLAN)) {
   need(!/background:(?!-)/.test(doneBlock), "完成态框体不得使用 background 简写");
 
   console.log(`  ✓ ${name}: ongoing=${p.ongoingBar} warning=${p.warningBar} completed=${COMPLETED_GREEN} matrix=${p.matrix.split(":")[1]}`);
+}
+
+/* ── 霓虹族构建器模板结构校验（逐案色值断言在 smoke 运行时侧——模板内是 ${…} 令牌插值而非字面量 hex） ── */
+const bStart = src.indexOf("function buildNeonFX");
+const bEnd = src.indexOf("const NEON_EXTRA");
+if (bStart < 0 || bEnd < 0 || !(bStart < bEnd)) {
+  console.log("  ✗ neon: buildNeonFX / NEON_EXTRA not found or out of order");
+  fail = true;
+} else {
+  const B = src.slice(bStart, bEnd);
+  const need2 = (cond, msg) => {
+    if (!cond) { console.log("  ✗ neon: " + msg); fail = true; }
+  };
+  need2(B.includes("box-shadow:inset 3px 0 0 #00FF88"), "完成框体须恒定 #00FF88 字面量（跨色板锚点）");
+  need2(B.includes('body.${BODY_CLASS} [data-state="ongoing"]{--dsh-state-ongoing:${business}}'), "ongoing 须走 business 令牌映射占位（非字面量 hex）");
+  need2(B.includes('P["--dsw-alias-state-business-primary"]'), "构建器须直读调色板令牌（单一色彩源）");
+  need2(B.includes("prefers-reduced-motion:reduce"), "构建器须带 prefers-reduced-motion 块");
+  need2(B.includes("vSynapse") && B.includes("vGrow") && B.includes("vEmerge"), "概念特效（点火/生长/涌现）须在场");
+  need2(B.includes("vSynapseE"), "出错卡须走赤红脉冲（成功/出错语义不混）");
+  /* 常驻循环仅限家族签名：vFlicker（CRT flicker）/ vScan（流式扫光）；概念特效全为一次性 */
+  const loops = [...B.matchAll(/animation:[^;]*infinite[^;}]*/g)].map((m) => m[0]);
+  need2(loops.length > 0 && loops.every((l) => l.includes("vFlicker") || l.includes("vScan")), "构建器 infinite 仅限 vFlicker/vScan，got: " + loops.join(" | "));
+  /* 色值泄漏守卫：构建器内 6 位 hex 字面量仅允许全族常量（完成绿/审批金/选区白/阴影黑） */
+  const hexes = [...new Set([...B.matchAll(/#[0-9A-Fa-f]{6}/g)].map((m) => m[0].toUpperCase()))];
+  const ALLOWED = new Set(["#00FF88", "#FFC857", "#FFFFFF", "#0A0A0C"]);
+  const leaked = hexes.filter((h) => !ALLOWED.has(h));
+  need2(leaked.length === 0, "构建器不得硬编码他案色值，leaked: " + leaked.join(","));
+  if (!fail) console.log("  ✓ neon: builder template structure ok（一次性概念特效 + 家族签名循环 + 令牌直读）");
 }
 
 /* done 无框：不得出现 data-state="done" 的框体选择器（完成态走 data-v-completed 标记） */

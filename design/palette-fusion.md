@@ -1,6 +1,6 @@
-# V 调色板 · Fusion 设计语言
+# V 调色板 · Tactical 设计语言
 
-> 来源：本地视觉参照稿（`design/refs/`，APT 紫队工具 · Fusion 模式，不入仓库）的完整视觉提炼。
+> 来源：`本地参照稿（不入仓库）`（APT 紫队工具 · Tactical 模式）的完整视觉提炼。
 > 用途：dsh-v-theme 及后续增量设计的**唯一色彩与线条参照**。
 > 原则：**SOC 克制基底 + FUI 霓虹点睛 + 语义色信息编码**——三层各司其职，永不混用。
 
@@ -130,10 +130,10 @@ clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 cal
 ```
 CRITICAL 追加 `.glitch-crit`（0.3s 克制 glitch，唯一动画特权）。
 
-### 4.4 渐变徽章（badge-fusion）
+### 4.4 渐变徽章（badge-tactical）
 
 ```css
-.badge-fusion {
+.badge-tactical {
   background:linear-gradient(135deg, var(--accent), var(--accent3)); /* 绿→青蓝 */
   color:var(--bg); font-size:11px; font-weight:700;
   padding:2px 10px; border-radius:4px; letter-spacing:1px;
@@ -208,9 +208,9 @@ CRITICAL 追加 `.glitch-crit`（0.3s 克制 glitch，唯一动画特权）。
 
 ## 6 · 语义通道映射（V 适配层 · 已落地）
 
-参照稿的多色顶边/状态灯编码，映射到 DSH 会话区的四个通道（边框/辉光/标题/标题辉光四载体同色贯穿）：
+参照稿 的多色顶边/状态灯编码，映射到 DSH 会话区的四个通道（边框/辉光/标题/标题辉光四载体同色贯穿）：
 
-| 通道 | Fusion 色 | Synthwave 色 | 落点 |
+| 通道 | Tactical 色 | Neon 色 | 落点 |
 |---|---|---|---|
 | Todo | FUI 绿 `#00FF88` | 暖粉 `#FF5CB0` | todo-panel |
 | 队列 | 青蓝 `#00D4FF` | 粉蓝 `#4DA8FF` | queue-dock |
