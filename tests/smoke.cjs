@@ -24,6 +24,9 @@ global.localStorage = {
 const bodyClasses = new Set();
 const headTags = [];
 const bodyOverlays = [];
+const docListeners = [];
+const chimeObservers = [];
+const audioCtxs = [];
 function makeElement() {
   return {
     dataset: {},
@@ -58,7 +61,59 @@ global.document = {
     appendChild: (el) => bodyOverlays.push(el)
   },
   head: { appendChild: (t) => headTags.push(t) },
-  createElement: () => makeElement()
+  createElement: () => makeElement(),
+  /* chime 生命周期：手势解锁监听 + 可见性门（冒烟不驱动边沿判定，仅要求 stub 在场） */
+  addEventListener: (type, fn) => docListeners.push({ type, fn, removed: false }),
+  removeEventListener: (type, fn) => {
+    for (const l of docListeners) if (l.type === type && l.fn === fn) l.removed = true;
+  },
+  hidden: false,
+  hasFocus: () => true
+};
+/* chime 需要的浏览器全局 stub（Web Audio / MutationObserver 为浏览器全局，不入 require stub 表） */
+global.MutationObserver = class {
+  constructor(cb) {
+    this.cb = cb;
+    this.config = null;
+    this.disconnected = false;
+  }
+  observe(target, config) {
+    this.config = { target, ...config };
+    if (config && config.attributeFilter) chimeObservers.push(this);
+  }
+  disconnect() {
+    this.disconnected = true;
+  }
+};
+global.AudioContext = function AudioContextStub() {
+  const ctx = {
+    state: "suspended",
+    currentTime: 0,
+    destination: { stub: "destination" },
+    resumeCalls: 0,
+    closeCalls: 0,
+    resume() {
+      this.resumeCalls++;
+      this.state = "running";
+      return Promise.resolve();
+    },
+    close() {
+      this.closeCalls++;
+      this.state = "closed";
+      return Promise.resolve();
+    },
+    createGain() {
+      return { gain: { value: 0 }, connect() {}, disconnect() {} };
+    },
+    createOscillator() {
+      return { type: "", frequency: { value: 0 }, connect() {}, start() {}, stop() {}, onended: null };
+    },
+    createBiquadFilter() {
+      return { type: "", frequency: { value: 0 }, connect() {}, disconnect() {} };
+    }
+  };
+  audioCtxs.push(ctx);
+  return ctx;
 };
 
 const fakeJsx = { jsx: (t, p) => ({ t, p }), jsxs: (t, p) => ({ t, p }) };
@@ -128,6 +183,7 @@ function makeTheme() {
 const theme = makeTheme();
 let localeDicts = null;
 const slotRegistrations = [];
+const teardownDisposers = [];
 const ctx = {
   theme,
   locale: { register: (ns, dicts) => { if (!dicts.zh || !dicts.en) throw new Error("locale dicts incomplete"); const zk = Object.keys(dicts.zh).sort().join(); const ek = Object.keys(dicts.en).sort().join(); if (zk !== ek) throw new Error("zh/en key mismatch"); localeDicts = dicts; return () => {}; } },
@@ -136,11 +192,12 @@ const ctx = {
       const props = decl.inject(actions);
       if (typeof props.toggle !== "function") throw new Error("slot inject must return toggle");
       if (typeof props.setTheme !== "function") throw new Error("slot inject must return setTheme");
+      if (typeof props.setChime !== "function" || typeof props.setVolume !== "function" || typeof props.previewChime !== "function") throw new Error("slot inject must return setChime/setVolume/previewChime");
       if ("toggleGlow" in props) throw new Error("slot inject must NOT return toggleGlow (feature removed)");
       slotRegistrations.slot = { decl, props, state };
       return () => {}; } },
   on: (ev, fn) => { if (ev !== "theme/change") throw new Error("unexpected event " + ev); return theme.on(fn); },
-  effect: (fn, label) => { const d = fn(); if (typeof d !== "function") throw new Error("effect must return disposer: " + label); return () => {}; }
+  effect: (fn, label) => { const d = fn(); if (typeof d !== "function") throw new Error("effect must return disposer: " + label); teardownDisposers.push({ d, label }); return () => {}; }
 };
 
 /* 预设已移除特性的陈旧持久化键：apply 必须以字面量键清理（设计决策 5） */
@@ -154,6 +211,16 @@ console.log("ok: stale glow key purged on apply");
 if (theme.layerCount() !== 0) throw new Error("layer should not be applied with flag off");
 if (theme.preference !== "system") throw new Error("preference must stay system with flag off");
 console.log("ok: flag off => no side effects");
+
+/* ── chime 反存默认开回归：主题关闭状态下仍武装，观察 document.body ── */
+if (chimeObservers.length !== 1) throw new Error("chime must be armed with theme off (default-on), got " + chimeObservers.length);
+const chimeObs1 = chimeObservers[0];
+if (chimeObs1.disconnected) throw new Error("chime observer must stay connected");
+if (chimeObs1.config.target !== global.document.body) throw new Error("chime observer must observe document.body");
+if (!chimeObs1.config.childList || !chimeObs1.config.subtree || !chimeObs1.config.attributes) throw new Error("chime observer config must be childList+subtree+attributes");
+if (JSON.stringify(chimeObs1.config.attributeFilter) !== JSON.stringify(["data-state"])) throw new Error("chime observer must filter [data-state]");
+if (localStorage.getItem("dsh-v-theme:chime") !== null) throw new Error("default-on must not write the chime key on first visit");
+console.log("ok: chime armed with theme off (default-on regression, no first-visit write)");
 
 /* toggle ON */
 slotRegistrations.slot.props.toggle();
@@ -249,11 +316,28 @@ const slotState = slotRegistrations.slot.state;
 if (slotState.enabled !== true) throw new Error("store must mirror enabled=true while on");
 if (slotState.themeId !== "neon") throw new Error("store must mirror themeId");
 if ("glow" in slotState) throw new Error("store state must not contain glow");
+if (slotState.chimeOn !== true) throw new Error("store must mirror chimeOn default true");
+if (slotState.volume !== 30) throw new Error("store must mirror volume default 30");
 const storeDecl = stores[stores.length - 1].decl;
+const initKeys = Object.keys(storeDecl.init()).sort().join();
+if (initKeys !== "chimeOn,enabled,themeId,volume") throw new Error("store init must be exactly {enabled,themeId,chimeOn,volume}, got " + initKeys);
 if ("glow" in storeDecl.init()) throw new Error("store init must not contain glow field");
+if (!("setChime" in storeDecl.actions) || !("setVolume" in storeDecl.actions)) throw new Error("store actions must contain setChime/setVolume");
 if ("setGlow" in storeDecl.actions || "toggleGlow" in storeDecl.actions) throw new Error("store actions must not contain setGlow/toggleGlow");
 if (localStorage.getItem("dsh-v-theme:glow") !== null) throw new Error("glow key must stay absent (feature removed)");
-console.log("ok: store mirror => enabled/themeId only, no glow surface");
+console.log("ok: store mirror => {enabled,themeId,chimeOn,volume} + setChime/setVolume, no glow surface");
+
+/* ── 设置行提示音控制：关 → 反存 "0" + 拆观察者；开 → 移键 + 重新武装 ── */
+const chimeProps = slotRegistrations.slot.props;
+chimeProps.setChime(false);
+if (localStorage.getItem("dsh-v-theme:chime") !== "0") throw new Error('chime off must persist reverse-flag "0"');
+if (!chimeObs1.disconnected) throw new Error("chime off must disconnect the observer");
+chimeProps.setChime(true);
+if (localStorage.getItem("dsh-v-theme:chime") !== null) throw new Error("chime on must keep reverse-flag absent (缺省即开)");
+if (chimeObservers.length !== 2 || chimeObservers[1].disconnected) throw new Error("chime on must re-arm a fresh observer");
+chimeProps.setVolume(55);
+if (localStorage.getItem("dsh-v-theme:volume") !== "55") throw new Error("setVolume must persist immediately");
+console.log('ok: settings-row chime toggle => "0" off / absent on + re-arm; volume persists');
 
 /* user switches base to light => auto disconnect */
 theme.setTheme("light");
@@ -272,9 +356,10 @@ if (theme.preference !== "light") throw new Error("toggle off must restore the p
 if (theme.layerCount() !== 0) throw new Error("toggle off must drop layer");
 console.log("ok: toggle off => restore preference");
 
-/* boot with flag on — 恢复上次的主题选择（此刻是 neon） */
+/* boot with flag on — 恢复上次的主题选择（此刻是 neon）；chime 反存 "0" → 不武装 */
 localStorage.setItem("dsh-v-theme:enabled", "1");
 localStorage.setItem("dsh-v-theme:theme", "tactical");
+localStorage.setItem("dsh-v-theme:chime", "0");
 const theme2 = makeTheme();
 ctx.theme = theme2;
 ctx.on = (ev, fn) => theme2.on(fn);
@@ -283,11 +368,29 @@ if (theme2.preference !== "dark" || theme2.layerCount() !== 1) throw new Error("
 if (bodyOverlays.length !== 0 || bodyClasses.has("v-glow")) throw new Error("boot must not mount body overlays or glow class");
 const tokensBoot = theme2.snapshot().active.tokens;
 if (tokensBoot["--dsw-alias-brand-primary"] !== "#56D4E0") throw new Error("boot must restore persisted tactical theme");
-console.log("ok: boot with flag on => re-activate with persisted theme");
+if (chimeObservers.length !== 2) throw new Error('chime stored "0" must stay disarmed on fresh boot');
+console.log("ok: boot with flag on => re-activate with persisted theme; chime stays disarmed per stored \"0\"");
+
+/* ── chime 重开 + 手势解锁 → AudioContext 懒创建并 resume ── */
+slotRegistrations.slot.props.setChime(true);
+if (chimeObservers.length !== 3 || chimeObservers[2].disconnected) throw new Error("instance-2 chime must arm on setChime(true)");
+for (const l of docListeners.slice()) if (l.type === "pointerdown" && !l.removed) l.fn();
+if (audioCtxs.length === 0) throw new Error("gesture must lazily create an AudioContext");
+if (!audioCtxs.every((c) => c.state === "running")) throw new Error("gesture must resume every lazily created context");
+console.log("ok: chime re-arm + gesture unlock => AudioContext lazily created and resumed");
 
 /* 收尾：关掉第二个实例，让进程可退出 */
 slotRegistrations.slot.props.toggle();
 if (bodyOverlays.length !== 0 || bodyClasses.has("v-glow")) throw new Error("final toggle off must leave body untouched");
 console.log("ok: final toggle off => body untouched");
+
+/* ── 插件 dispose：observer 断开 / AudioContext close / 手势监听移除 / require 全命中 ── */
+const teardowns = teardownDisposers.filter((d) => d.label === "v: teardown");
+const lastTeardown = teardowns[teardowns.length - 1];
+lastTeardown.d();
+if (!chimeObservers[2].disconnected) throw new Error("dispose must disconnect the chime observer");
+if (audioCtxs[audioCtxs.length - 1].closeCalls !== 1) throw new Error("dispose must close the AudioContext");
+if (docListeners.some((l) => !l.removed)) throw new Error("dispose stage must leave no gesture listeners bound");
+console.log("ok: dispose => chime observer disconnected + AudioContext closed + gesture listeners gone");
 
 console.log("\nALL SMOKE TESTS PASSED");

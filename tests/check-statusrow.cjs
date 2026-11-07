@@ -136,5 +136,42 @@ for (const [needle, what] of WIRING) {
   else { console.log("  ✗ wiring 缺失: " + what + "（" + needle + "）"); fail = true; }
 }
 
+/* ── chime 锚点断言（add-session-chime）：实现使用官方会话行 DOM 锚点 + 抗后台节流纪律 ── */
+const CHIME_SEL = `'[class*="sessionRow"]'`;
+const chimeSynthStart = src.indexOf("const CHIME_NOTES");
+const chimeSynthEnd = src.indexOf("const ROW_CSS");
+const chimeApplyStart = src.indexOf("/* ── chime 声音子系统");
+const chimeApplyEnd = src.indexOf("function enableFx()");
+if (
+  chimeSynthStart < 0 || chimeSynthEnd < 0 || !(chimeSynthStart < chimeSynthEnd) ||
+  chimeApplyStart < 0 || chimeApplyEnd < 0 || !(chimeApplyStart < chimeApplyEnd)
+) {
+  console.log("  ✗ chime: 合成器/观察器代码块定位失败");
+  fail = true;
+} else {
+  const CHIME = src.slice(chimeSynthStart, chimeSynthEnd) + src.slice(chimeApplyStart, chimeApplyEnd);
+  /* 剥离注释后再做字面量断言（避免文档性提及定时器误报） */
+  const CHIME_CODE = CHIME.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  const need3 = (cond, msg) => {
+    if (!cond) { console.log("  ✗ chime: " + msg); fail = true; }
+  };
+  /* 官方 DOM 锚点：行类名 / 稳定键 / 状态点属性 / 屏幕阅读器标签 */
+  need3(CHIME.includes(CHIME_SEL), "chime 行选择器须用官方 [class*=\"sessionRow\"] 锚点");
+  need3(CHIME.includes('getAttribute("data-row-key")'), "快照键须读行 data-row-key（session:<id> 稳定锚点）");
+  need3(CHIME.includes('attributeFilter: ["data-state"]'), "观察配置须 attributeFilter: [\"data-state\"]（StateDot 锚点）");
+  need3(CHIME.includes('[class*="visuallyHidden"]'), "完成消歧须读首个 visuallyHidden 状态标签");
+  /* 触发面纪律：closest 归属过滤 + 脱离文档短路 */
+  need3(CHIME.includes("closest(CHIME_ROW_SELECTOR)"), "每条 record 须经 closest 归属判定");
+  need3(CHIME.includes("isConnected === false"), "脱离文档的行（isConnected false）须短路跳过");
+  /* 观察目标：document.body */
+  need3(CHIME.includes("chimeObserver.observe(document.body"), "chime 观察器须挂在 document.body");
+  /* 抗后台节流：声音路径同步无去抖（无定时器、不监听 characterData） */
+  need3(!CHIME_CODE.includes("setTimeout") && !CHIME_CODE.includes("setInterval"), "chime 路径不得出现 setTimeout / setInterval");
+  need3(!CHIME_CODE.includes("characterData"), "chime 路径不得监听 characterData");
+  /* 完成消歧复用既有 locale 标签集 */
+  need3(CHIME.includes("COMPLETED_LABELS.includes"), "完成判定须复用 COMPLETED_LABELS（locale 运行时增补）");
+  if (!fail) console.log("  ✓ chime: 官方锚点全数命中 + 同步无去抖纪律（closest/row-key/data-state/visuallyHidden/body）");
+}
+
 if (fail) { console.log("\nSTATUS-ROW CHECK: FAIL"); process.exit(1); }
 console.log("\nSTATUS-ROW CHECK: PASS");

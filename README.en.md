@@ -53,7 +53,21 @@ Append `#<commit-sha>` to pin a version; or clone and `add "link:<clone path>"`,
 
 - **Master switch**: connect / disconnect — connecting pins the dark appearance and overlays the theme; state persists and auto-reconnects on restart
 - **Style picker**: seven chips; hot swap on click while connected, no restart
-- Switching Appearance away from dark auto-disconnects the theme
+- **Chime controls**: on/off chip (on by default) + volume slider (0–100, default 30, silent while dragging) + two preview buttons (done tone / your-turn tone, play on click); everything takes effect immediately
+- Switching Appearance away from dark auto-disconnects the theme (the chime is unaffected)
+
+## Session Chime
+
+Sounds play on session-row state **edges**, completing the "eyes when visible, ears when hidden" reminder loop:
+
+- **Your turn** (rising C5→G5): any session enters "waiting approval / plan review / waiting answer"
+- **Done** (falling E5→C5): any session becomes "completed" (disambiguated from idle via the screen-reader label)
+- **On by default**; sounds only while the page is **hidden or unfocused** (visible reminders stay with the status frames)
+- **Triple comfort gates**: visibility → 1.5s cooldown merge (many sessions flipping at once play at most one tone; "your turn" may override a just-played "done") → gesture-unlock gate (silent until the first click / keypress)
+- **Throttle-proof**: an independent MutationObserver judges synchronously with no timer dependency — the chime keeps working after 5+ minutes in a background tab
+- **Decoupled from the theme**: keeps working while the theme is off; re-enabling only rebuilds a fresh baseline without replaying missed events
+
+**Known limitations**: multiple GUI tabs each chime independently; events missed before the unlock (first click / keypress) stay silent; events missed while the chime is off are not replayed.
 
 ## How It Works
 
@@ -65,6 +79,7 @@ Append `#<commit-sha>` to pin a version; or clone and `add "link:<clone path>"`,
 | FX | A plugin-private stylesheet scoped to `body.v-cyber`, swapped wholesale with the theme |
 | Baseline guard | The NEON baseline is fingerprinted with SHA-256; touches require an explicit unseal |
 | Self-healing | Listens to `theme/change`: re-adds the layer if removed, auto-disconnects if the base is switched away |
+| Chime | An independent chime MutationObserver (`childList + attributes[data-state]`, synchronous, no debounce): `closest` attribution filter → per-row snapshot edge detection (`data-row-key` keyed, baseline on first scan) → triple comfort gates → Web Audio synthesis (sine + exponential envelope + 4kHz lowpass, zero assets) |
 
 ## Repository Layout & Checks
 
@@ -79,9 +94,10 @@ tests/              Runnable checks (Node, no browser)
 
 ```sh
 npm run check                    # syntax check
-npm test                         # plugin contract smoke + five-colorway hot swap
+npm test                         # plugin contract smoke + five-colorway hot swap + chime lifecycle
 node tests/check-palettes.cjs    # palette contract ×7
-node tests/check-statusrow.cjs   # session status frame contract
+node tests/check-statusrow.cjs   # session status frame contract + chime official anchors
+node tests/check-chime.cjs       # chime contract (edges / gates / synthesis / persistence / lifecycle)
 node tests/check-baseline.cjs    # baseline fingerprint (SHA-256)
 node tests/verify-install.cjs    # install discovery check (requires a profile install)
 ```
